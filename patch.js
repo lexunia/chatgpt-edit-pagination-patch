@@ -1,0 +1,202 @@
+(function () {
+  "use strict";
+
+  const EXPERIMENT_IDS = new Set(["3879630193", "3879348497"]);
+  const EDIT_PARAMETER_NAMES = new Set([
+    "hide_pagination",
+    "edit_buttons_hidden",
+    "edit_actions_treatment",
+    "edit_warning",
+  ]);
+  const TEXT_NEEDLE = /hide_pagination|edit_actions_treatment/;
+  const INTERESTING_URL = /statsig|initialize|bootstrap/i;
+  const INTERESTING_CONTENT_TYPE = /json|javascript|text|html/i;
+  const MAX_JSON_STRING_DEPTH = 2;
+  let originalParse = JSON.parse;
+
+  const hasEditPaginationTextShape = (text) =>
+    text.includes("hide_pagination") &&
+    text.includes("edit_buttons_hidden") &&
+    text.includes("edit_actions_treatment") &&
+    text.includes("edit_warning");
+
+  const patchTextFallback = (text) => {
+    if (typeof text !== "string" || !TEXT_NEEDLE.test(text)) return text;
+    if (!hasEditPaginationTextShape(text)) return text;
+
+    return text
+      .replace(/("hide_pagination"\s*:\s*)true/g, "$1false")
+      .replace(/(\\"hide_pagination\\"\s*:\s*)true/g, "$1false")
+      .replace(/("edit_buttons_hidden"\s*:\s*)true/g, "$1false")
+      .replace(/(\\"edit_buttons_hidden\\"\s*:\s*)true/g, "$1false")
+      .replace(/("edit_actions_treatment"\s*:\s*)"(warning|branch_prefill)"/g, '$1"default"')
+      .replace(/(\\"edit_actions_treatment\\"\s*:\s*)\\"(warning|branch_prefill)\\"/g, '$1\\"default\\"')
+      .replace(/("edit_warning"\s*:\s*)"warning"/g, '$1"none"')
+      .replace(/(\\"edit_warning\\"\s*:\s*)\\"warning\\"/g, '$1\\"none\\"')
+      .replace(/("group_name"\s*:\s*)"(Warning|Branch Prefill)"/g, '$1"Control"')
+      .replace(/(\\"group_name\\"\s*:\s*)\\"(Warning|Branch Prefill)\\"/g, '$1\\"Control\\"')
+      .replace(
+        /("is_user_in_experiment"\s*:\s*)true(?=,\s*"allocated_experiment_name"\s*:\s*"(3879630193|3879348497)")/g,
+        "$1false",
+      )
+      .replace(
+        /(\\"is_user_in_experiment\\"\s*:\s*)true(?=,\s*\\"allocated_experiment_name\\"\s*:\s*\\"(3879630193|3879348497)\\")/g,
+        "$1false",
+      );
+  };
+
+  const hasEditPaginationShape = (value) =>
+    value &&
+    typeof value === "object" &&
+    "hide_pagination" in value &&
+    "edit_buttons_hidden" in value &&
+    "edit_actions_treatment" in value &&
+    "edit_warning" in value &&
+    typeof value.hide_pagination === "boolean" &&
+    typeof value.edit_buttons_hidden === "boolean" &&
+    typeof value.edit_actions_treatment === "string" &&
+    typeof value.edit_warning === "string";
+
+  const hasCoreEditPaginationShape = (value) =>
+    value &&
+    typeof value === "object" &&
+    "hide_pagination" in value &&
+    "edit_actions_treatment" in value;
+
+  const normalizeEditPaginationValue = (value) => {
+    value.hide_pagination = false;
+    value.edit_buttons_hidden = false;
+    value.edit_actions_treatment = "default";
+    value.edit_warning = "none";
+  };
+
+  const isDefaultEditPaginationValue = (value) =>
+    value.hide_pagination === false &&
+    value.edit_buttons_hidden === false &&
+    value.edit_actions_treatment === "default" &&
+    value.edit_warning === "none";
+
+  const shouldPatchResponse = (url, contentType) =>
+    INTERESTING_URL.test(url) &&
+    INTERESTING_CONTENT_TYPE.test(contentType) &&
+    !/text\/event-stream/i.test(contentType);
+
+  const patchExperimentConfig = (cfg) => {
+    if (!cfg || typeof cfg !== "object") return false;
+
+    const value = cfg.value;
+    const isKnownExperiment = EXPERIMENT_IDS.has(String(cfg.allocated_experiment_name));
+    const hit =
+      (hasEditPaginationShape(value) && !isDefaultEditPaginationValue(value)) ||
+      (isKnownExperiment && hasCoreEditPaginationShape(value));
+
+    if (!hit) return false;
+
+    normalizeEditPaginationValue(value);
+    cfg.group_name = "Control";
+    cfg.is_user_in_experiment = false;
+    cfg.explicit_parameters = Array.isArray(cfg.explicit_parameters)
+      ? cfg.explicit_parameters.filter((name) => !EDIT_PARAMETER_NAMES.has(name))
+      : [];
+
+    return true;
+  };
+
+  const patchPossiblyJsonText = (text, jsonStringDepth = 0) => {
+    if (typeof text !== "string" || !TEXT_NEEDLE.test(text)) return text;
+
+    if (jsonStringDepth <= MAX_JSON_STRING_DEPTH) {
+      try {
+        const parsed = originalParse.call(JSON, text);
+        if (parsed && typeof parsed === "object") return JSON.stringify(patchObject(parsed, jsonStringDepth));
+      } catch {
+        // Not a standalone JSON value. Fall back to constrained text replacement.
+      }
+    }
+
+    return patchTextFallback(text);
+  };
+
+  const patchObject = (root, jsonStringDepth = 0) => {
+    const seen = new WeakSet();
+
+    const walk = (obj) => {
+      if (!obj || typeof obj !== "object" || seen.has(obj)) return;
+      seen.add(obj);
+
+      if (obj.layer_configs && typeof obj.layer_configs === "object") {
+        for (const cfg of Object.values(obj.layer_configs)) patchExperimentConfig(cfg);
+      }
+
+      patchExperimentConfig(obj);
+
+      if (hasEditPaginationShape(obj)) normalizeEditPaginationValue(obj);
+
+      for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        if (typeof value === "string") {
+          obj[key] = patchPossiblyJsonText(value, jsonStringDepth + 1);
+        } else {
+          walk(value);
+        }
+      }
+    };
+
+    walk(root);
+    return root;
+  };
+
+  JSON.parse = function patchedParse(text, reviver) {
+    const parsed = originalParse.call(this, text, reviver);
+    return typeof text === "string" && TEXT_NEEDLE.test(text) ? patchObject(parsed, 0) : parsed;
+  };
+
+  const originalFetch = window.fetch;
+  window.fetch = async function patchedFetch(...args) {
+    const response = await originalFetch.apply(this, args);
+    const url = String(args[0]?.url ?? args[0] ?? response.url ?? "");
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (!shouldPatchResponse(url, contentType)) return response;
+
+    const text = await response.clone().text().catch(() => null);
+
+    if (!text || !TEXT_NEEDLE.test(text)) return response;
+
+    const patchedText = patchPossiblyJsonText(text);
+    if (patchedText === text) return response;
+
+    const makePatchedResponse = () => {
+      const headers = new Headers(response.headers);
+      headers.delete("content-length");
+      headers.delete("content-encoding");
+      const patchedResponse = new Response(patchedText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+
+      for (const prop of ["url", "type", "redirected"]) {
+        Object.defineProperty(patchedResponse, prop, {
+          configurable: true,
+          value: response[prop],
+        });
+      }
+
+      return patchedResponse;
+    };
+
+    return makePatchedResponse();
+  };
+
+  if (globalThis.__CHATGPT_EDIT_PAGINATION_PATCH_TEST__ === true) {
+    globalThis.__chatgptEditPaginationPatch = {
+      hasEditPaginationShape,
+      isDefaultEditPaginationValue,
+      normalizeEditPaginationValue,
+      patchObject,
+      patchPossiblyJsonText,
+      shouldPatchResponse,
+    };
+  }
+})();

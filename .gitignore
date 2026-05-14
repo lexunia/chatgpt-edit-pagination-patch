@@ -1,0 +1,18 @@
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Local Chrome extension build/package artifacts
+*.crx
+*.pem
+*.zip
+dist/
+build/
+
+# Dependencies, if tooling is added later
+node_modules/

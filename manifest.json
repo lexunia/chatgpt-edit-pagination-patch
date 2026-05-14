@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Edit Pagination Patch",
+  "version": "0.3.7",
+  "description": "Restores ChatGPT edited-message branch pagination controls.",
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["patch.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
