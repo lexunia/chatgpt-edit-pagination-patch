@@ -4,6 +4,14 @@ Small unpacked Chrome extension for restoring the old ChatGPT edited-message bra
 
 It was made for the experiment state where edited message variants stop showing the usual `1/2`, `2/2` branch controls and instead use the newer edit warning/treatment behavior.
 
+## Install
+
+1. Open `chrome://extensions`.
+2. Enable `Developer mode`.
+3. Click `Load unpacked`.
+4. Select the `chatgpt-edit-pagination-patch` folder.
+5. Reload ChatGPT with `Ctrl+Shift+R`.
+
 ## What It Changes
 
 The extension looks for ChatGPT bootstrap/config objects with this edit-pagination value shape:
@@ -83,14 +91,6 @@ bootstrap
 ```
 
 Other backend responses are returned untouched.
-
-## Install
-
-1. Open `chrome://extensions`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked`.
-4. Select the `chatgpt-edit-pagination-patch` folder.
-5. Reload ChatGPT with `Ctrl+Shift+R`.
 
 ## Known Limits
 
