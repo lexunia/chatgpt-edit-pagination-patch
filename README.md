@@ -25,9 +25,11 @@ The extension looks for ChatGPT bootstrap/config objects with this edit-paginati
   edit_buttons_hidden,
   edit_actions_treatment,
   edit_warning,
-  variant_modal, // optional in older payloads
+  variant_modal,
 }
 ```
+
+`variant_modal` is optional: older payloads may not include this field.
 
 When that shape is found, the value is normalized to the default profile behavior:
 
@@ -37,9 +39,11 @@ When that shape is found, the value is normalized to the default profile behavio
   edit_buttons_hidden: false,
   edit_actions_treatment: "default",
   edit_warning: "none",
-  variant_modal: false, // only when the field exists
+  variant_modal: false,
 }
 ```
+
+`variant_modal` is only changed when the field already exists in the payload.
 
 For known affected experiment configs, metadata is also normalized:
 
