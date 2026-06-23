@@ -1,12 +1,13 @@
 (function () {
   "use strict";
 
-  const EXPERIMENT_IDS = new Set(["3879630193", "3879348497"]);
+  const EXPERIMENT_IDS = new Set(["3879630193", "3879348497", "1973873291"]);
   const EDIT_PARAMETER_NAMES = new Set([
     "hide_pagination",
     "edit_buttons_hidden",
     "edit_actions_treatment",
     "edit_warning",
+    "variant_modal",
   ]);
   const TEXT_NEEDLE = /hide_pagination|edit_actions_treatment/;
   const INTERESTING_URL = /statsig|initialize|bootstrap/i;
@@ -33,14 +34,16 @@
       .replace(/(\\"edit_actions_treatment\\"\s*:\s*)\\"(warning|branch_prefill)\\"/g, '$1\\"default\\"')
       .replace(/("edit_warning"\s*:\s*)"warning"/g, '$1"none"')
       .replace(/(\\"edit_warning\\"\s*:\s*)\\"warning\\"/g, '$1\\"none\\"')
+      .replace(/("variant_modal"\s*:\s*)true/g, "$1false")
+      .replace(/(\\"variant_modal\\"\s*:\s*)true/g, "$1false")
       .replace(/("group_name"\s*:\s*)"(Warning|Branch Prefill)"/g, '$1"Control"')
       .replace(/(\\"group_name\\"\s*:\s*)\\"(Warning|Branch Prefill)\\"/g, '$1\\"Control\\"')
       .replace(
-        /("is_user_in_experiment"\s*:\s*)true(?=,\s*"allocated_experiment_name"\s*:\s*"(3879630193|3879348497)")/g,
+        /("is_user_in_experiment"\s*:\s*)true(?=,\s*"allocated_experiment_name"\s*:\s*"(3879630193|3879348497|1973873291)")/g,
         "$1false",
       )
       .replace(
-        /(\\"is_user_in_experiment\\"\s*:\s*)true(?=,\s*\\"allocated_experiment_name\\"\s*:\s*\\"(3879630193|3879348497)\\")/g,
+        /(\\"is_user_in_experiment\\"\s*:\s*)true(?=,\s*\\"allocated_experiment_name\\"\s*:\s*\\"(3879630193|3879348497|1973873291)\\")/g,
         "$1false",
       );
   };
@@ -55,7 +58,8 @@
     typeof value.hide_pagination === "boolean" &&
     typeof value.edit_buttons_hidden === "boolean" &&
     typeof value.edit_actions_treatment === "string" &&
-    typeof value.edit_warning === "string";
+    typeof value.edit_warning === "string" &&
+    (!("variant_modal" in value) || typeof value.variant_modal === "boolean");
 
   const hasCoreEditPaginationShape = (value) =>
     value &&
@@ -68,13 +72,15 @@
     value.edit_buttons_hidden = false;
     value.edit_actions_treatment = "default";
     value.edit_warning = "none";
+    if ("variant_modal" in value) value.variant_modal = false;
   };
 
   const isDefaultEditPaginationValue = (value) =>
     value.hide_pagination === false &&
     value.edit_buttons_hidden === false &&
     value.edit_actions_treatment === "default" &&
-    value.edit_warning === "none";
+    value.edit_warning === "none" &&
+    (!("variant_modal" in value) || value.variant_modal === false);
 
   const shouldPatchResponse = (url, contentType) =>
     INTERESTING_URL.test(url) &&

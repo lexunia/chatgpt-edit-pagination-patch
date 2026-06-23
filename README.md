@@ -1,8 +1,11 @@
 # ChatGPT Edit Pagination Patch
 
-Small unpacked Chrome extension for restoring the old ChatGPT edited-message branch pagination UI when an experiment hides it.
+Small unpacked Chrome extension for restoring ChatGPT edited-message version controls when an experiment hides them or forces the newer branch modal.
 
-It was made for the experiment state where edited message variants stop showing the usual `1/2`, `2/2` branch controls and instead use the newer edit warning/treatment behavior.
+It was made for experiment states where edited message variants stop behaving like normal selectable versions:
+
+- older variants hid the usual `1/2`, `2/2` branch controls;
+- the newer variant shows the versions, but opening an older version leads to a "continue in a new chat" modal instead of letting you work with that version in place.
 
 ## Install
 
@@ -22,6 +25,7 @@ The extension looks for ChatGPT bootstrap/config objects with this edit-paginati
   edit_buttons_hidden,
   edit_actions_treatment,
   edit_warning,
+  variant_modal, // optional in older payloads
 }
 ```
 
@@ -33,6 +37,7 @@ When that shape is found, the value is normalized to the default profile behavio
   edit_buttons_hidden: false,
   edit_actions_treatment: "default",
   edit_warning: "none",
+  variant_modal: false, // only when the field exists
 }
 ```
 
@@ -43,13 +48,22 @@ group_name: "Control"
 is_user_in_experiment: false
 ```
 
-Edit-pagination entries are removed from `explicit_parameters`; unrelated entries are preserved.
+Edit-pagination entries are removed from `explicit_parameters`; unrelated entries are preserved. This includes `variant_modal` when present.
 
 Known experiment ids are used only as secondary markers:
 
 ```txt
 3879630193
 3879348497
+1973873291
+```
+
+Observed affected groups:
+
+```txt
+Warning
+Branch Prefill
+Test
 ```
 
 The primary match is the edit-pagination field shape, not a single user id or account-specific id.
