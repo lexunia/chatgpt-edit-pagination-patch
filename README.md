@@ -49,8 +49,6 @@ When that shape is found, the value is normalized to the default profile behavio
 }
 ```
 
-If a matched payload does not contain `variant_modal`, the extension does not add it.
-
 For known affected experiment configs, metadata is also normalized:
 
 ```js
