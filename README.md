@@ -21,29 +21,35 @@ The extension looks for ChatGPT bootstrap/config objects with this edit-paginati
 
 ```js
 {
-  hide_pagination,
-  edit_buttons_hidden,
-  edit_actions_treatment,
-  edit_warning,
   variant_modal,
+  hide_pagination,
+  edit_actions_treatment,
+  edit_buttons_hidden,
+  edit_warning,
 }
 ```
 
-`variant_modal` is optional: older payloads may not include this field.
+Observed fields:
+
+- `variant_modal`: newer experiment flag. When `true`, ChatGPT opens older edited-message versions in a branch modal with a "continue in a new chat" action.
+- `hide_pagination`: older experiment flag. When `true`, ChatGPT hides the usual edited-message version pagination controls.
+- `edit_actions_treatment`: older experiment treatment string. Observed affected values were `"warning"` and `"branch_prefill"`.
+- `edit_buttons_hidden`: edit-control visibility flag. The default value is `false`.
+- `edit_warning`: edit-warning mode. The default value is `"none"`.
 
 When that shape is found, the value is normalized to the default profile behavior:
 
 ```js
 {
-  hide_pagination: false,
-  edit_buttons_hidden: false,
-  edit_actions_treatment: "default",
-  edit_warning: "none",
   variant_modal: false,
+  hide_pagination: false,
+  edit_actions_treatment: "default",
+  edit_buttons_hidden: false,
+  edit_warning: "none",
 }
 ```
 
-`variant_modal` is only changed when the field already exists in the payload.
+If a matched payload does not contain `variant_modal`, the extension does not add it.
 
 For known affected experiment configs, metadata is also normalized:
 
@@ -52,23 +58,17 @@ group_name: "Control"
 is_user_in_experiment: false
 ```
 
-Edit-pagination entries are removed from `explicit_parameters`; unrelated entries are preserved. This includes `variant_modal` when present.
+Edit-pagination entries are removed from `explicit_parameters`; unrelated entries are preserved.
 
-Known experiment ids are used only as secondary markers:
+Observed affected experiments:
 
-```txt
-3879630193
-3879348497
-1973873291
-```
+| Experiment id | Group | Explicit parameters | Observed behavior |
+| --- | --- | --- | --- |
+| `1973873291` | `Test` | `variant_modal` | Shows edited-message versions, but opens older versions through the branch modal. |
+| `3879630193` | `Warning` | `hide_pagination`, `edit_actions_treatment` | Hides edited-message pagination and applies the warning treatment. |
+| `3879348497` | `Branch Prefill` | `hide_pagination`, `edit_actions_treatment` | Hides edited-message pagination and applies the branch-prefill treatment. |
 
-Observed affected groups:
-
-```txt
-Warning
-Branch Prefill
-Test
-```
+Known experiment ids are used only as secondary markers.
 
 The primary match is the edit-pagination field shape, not a single user id or account-specific id.
 
