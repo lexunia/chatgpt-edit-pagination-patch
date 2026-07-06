@@ -157,42 +157,18 @@
     return typeof text === "string" && TEXT_NEEDLE.test(text) ? patchObject(parsed, 0) : parsed;
   };
 
-  const originalFetch = window.fetch;
-  window.fetch = async function patchedFetch(...args) {
-    const response = await originalFetch.apply(this, args);
-    const url = String(args[0]?.url ?? args[0] ?? response.url ?? "");
-    const contentType = response.headers.get("content-type") ?? "";
+  const originalResponseJson = Response.prototype.json;
+  Response.prototype.json = function patchedResponseJson(...args) {
+    const parsedPromise = originalResponseJson.apply(this, args);
+    const url = String(this.url ?? "");
+    const contentType = this.headers.get("content-type") ?? "";
 
-    if (!shouldPatchResponse(url, contentType)) return response;
+    if (!shouldPatchResponse(url, contentType)) return parsedPromise;
 
-    const text = await response.clone().text().catch(() => null);
-
-    if (!text || !TEXT_NEEDLE.test(text)) return response;
-
-    const patchedText = patchPossiblyJsonText(text);
-    if (patchedText === text) return response;
-
-    const makePatchedResponse = () => {
-      const headers = new Headers(response.headers);
-      headers.delete("content-length");
-      headers.delete("content-encoding");
-      const patchedResponse = new Response(patchedText, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-
-      for (const prop of ["url", "type", "redirected"]) {
-        Object.defineProperty(patchedResponse, prop, {
-          configurable: true,
-          value: response[prop],
-        });
-      }
-
-      return patchedResponse;
-    };
-
-    return makePatchedResponse();
+    return parsedPromise.then((parsed) => {
+      if (typeof parsed === "string") return patchPossiblyJsonText(parsed);
+      return patchObject(parsed, 0);
+    });
   };
 
   if (globalThis.__CHATGPT_EDIT_PAGINATION_PATCH_TEST__ === true) {
