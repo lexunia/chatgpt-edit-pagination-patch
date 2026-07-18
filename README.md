@@ -74,7 +74,7 @@ The primary match is the edit-pagination field shape, not a single user id or ac
 
 The extension does not:
 
-- add extension permissions;
+- declare Chrome API permissions such as cookies, storage, tabs, `webRequest`, or scripting; its only site access is the `https://chatgpt.com/*` content-script match;
 - send requests;
 - collect or upload data;
 - read cookies directly;
@@ -94,11 +94,11 @@ https://chatgpt.com/*
 It installs two early hooks in the page context:
 
 - `JSON.parse`
-- `fetch`
+- `Response.prototype.json`
 
 `JSON.parse` only walks parsed objects when the original JSON text contains edit-pagination markers.
 
-`fetch` only inspects config-like responses whose URL contains one of:
+`Response.prototype.json` only patches parsed values from config-like responses whose URL contains one of:
 
 ```txt
 statsig
@@ -106,7 +106,7 @@ initialize
 bootstrap
 ```
 
-Other backend responses are returned untouched.
+For other backend responses, it returns the original parsed result without patching it.
 
 ## Known Limits
 
