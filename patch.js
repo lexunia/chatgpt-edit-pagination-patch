@@ -9,7 +9,8 @@
     "edit_warning",
     "variant_modal",
   ]);
-  const TEXT_NEEDLE = /hide_pagination|edit_actions_treatment/;
+  const PAGINATED_MESSAGES_LAYER_ID = "2605344799";
+  const TEXT_NEEDLE = /hide_pagination|edit_actions_treatment|2605344799/;
   const INTERESTING_URL = /statsig|initialize|bootstrap/i;
   const INTERESTING_CONTENT_TYPE = /json|javascript|text|html/i;
   const MAX_JSON_STRING_DEPTH = 2;
@@ -108,6 +109,27 @@
     return true;
   };
 
+  const patchPaginatedMessagesConfig = (cfg) => {
+    if (
+      !cfg ||
+      typeof cfg !== "object" ||
+      String(cfg.name) !== PAGINATED_MESSAGES_LAYER_ID ||
+      !cfg.value ||
+      typeof cfg.value !== "object" ||
+      typeof cfg.value.num_turns !== "number" ||
+      cfg.value.num_turns === 0
+    ) {
+      return false;
+    }
+
+    cfg.value.num_turns = 0;
+    if (Array.isArray(cfg.explicit_parameters)) {
+      cfg.explicit_parameters = cfg.explicit_parameters.filter((name) => name !== "num_turns");
+    }
+
+    return true;
+  };
+
   const patchPossiblyJsonText = (text, jsonStringDepth = 0) => {
     if (typeof text !== "string" || !TEXT_NEEDLE.test(text)) return text;
 
@@ -131,6 +153,7 @@
       seen.add(obj);
 
       if (obj.layer_configs && typeof obj.layer_configs === "object") {
+        patchPaginatedMessagesConfig(obj.layer_configs[PAGINATED_MESSAGES_LAYER_ID]);
         for (const cfg of Object.values(obj.layer_configs)) patchExperimentConfig(cfg);
       }
 
@@ -177,6 +200,7 @@
       isDefaultEditPaginationValue,
       normalizeEditPaginationValue,
       patchObject,
+      patchPaginatedMessagesConfig,
       patchPossiblyJsonText,
       shouldPatchResponse,
     };
