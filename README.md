@@ -1,12 +1,14 @@
 # ChatGPT Edit Pagination Patch
 
-Small unpacked Chrome extension for restoring ChatGPT edited-message version controls when an experiment or conversation-loading rollout removes normal branch navigation.
+Restores ChatGPT's original edited-message pagination and branch navigation.
 
-It was made for ChatGPT states where edited message variants stop behaving like normal selectable versions:
-
-- older variants hid the usual `1/2`, `2/2` branch controls;
-- a later variant shows the versions, but opening an older version leads to a "continue in a new chat" modal instead of letting you work with that version in place;
-- the current paginated-messages rollout changes the initial conversation response from a full graph to a `messages` payload without the full conversation graph and handles older versions separately.
+<p align="center">
+  <img
+    src="assets/pagination-demo.png"
+    alt="ChatGPT conversation showing restored message pagination"
+    width="900"
+  >
+</p>
 
 ## Install
 
