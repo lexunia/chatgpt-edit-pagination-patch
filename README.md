@@ -10,13 +10,24 @@ Restores ChatGPT's original edited-message pagination and branch navigation.
   >
 </p>
 
-## Install
+## Download and Install
 
-1. Open `chrome://extensions`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked`.
-4. Select the `chatgpt-edit-pagination-patch` folder.
-5. Reload ChatGPT with `Ctrl+Shift+R`.
+1. On this GitHub page, click the **Code** button above the file list.
+2. Click **Download ZIP**.
+3. When the download finishes, open your Downloads folder.
+4. Right-click the downloaded ZIP file and select **Extract All**.
+5. Move the extracted `chatgpt-edit-pagination-patch-main` folder to a permanent location where you will not delete or move it later.
+6. Open the extracted folder and make sure it contains `manifest.json` and `patch.js`.
+7. Open Chrome and enter `chrome://extensions` in the address bar.
+8. Enable **Developer mode** in the top-right corner.
+9. Click **Load unpacked**.
+10. Select the extracted folder that directly contains `manifest.json`. Do not select the ZIP file, the `assets` folder, or a parent folder.
+11. Make sure **ChatGPT Edit Pagination Patch** appears on the Extensions page and is enabled.
+12. Reload every open ChatGPT tab with `Ctrl+Shift+R`.
+
+> Keep the extracted folder after installation. Chrome loads the extension directly from that location. If you delete, rename, or move the folder, the extension may stop working and will need to be loaded again.
+
+If Chrome reports that the manifest is missing or unreadable, you selected the wrong folder. Select the folder that directly contains `manifest.json`.
 
 ## What It Changes
 
